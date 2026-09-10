@@ -1,0 +1,30 @@
+# YOLOv8 目标检测项目 - 环境依赖
+# Python >= 3.8
+
+# 核心依赖
+torch>=1.8.0
+torchvision>=0.9.0
+numpy>=1.23.0
+opencv-python>=4.6.0
+
+# 图像处理
+Pillow>=7.1.2
+matplotlib>=3.3.0
+
+# 配置与网络
+pyyaml>=5.3.1
+requests>=2.23.0
+
+# YOLOv8 框架（通过 pip 安装）
+ultralytics>=8.4.33
+
+# 以下为 ultralytics 自身依赖：
+scipy>=1.4.1
+psutil>=5.8.0
+polars>=0.20.0
+ultralytics-thop>=2.0.18
+
+# ONNX 轻量化部署（export / onnx / benchmark 模式需要）
+onnx>=1.12.0
+onnxslim>=0.1.71
+onnxruntime>=1.12.0

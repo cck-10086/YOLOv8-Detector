@@ -1,0 +1,32 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== IDE 配置 =====
+.idea/
+.vscode/
+*.iml
+
+# ===== 预训练模型（运行时自动下载）=====
+models/*.pt
+models/*.onnx
+
+# ===== 第三方框架源码 =====
+ultralytics-main/
+
+# ===== 检测输出与中间结果 =====
+outputs/
+runs/
+*.mp4
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db

@@ -1,0 +1,47 @@
+# ============================================================
+# YOLOv8 目标检测项目 - 配置文件
+# ============================================================
+
+# --- 模型配置 ---
+model:
+  # 模型名称: yolov8n, yolov8s, yolov8m, yolov8l, yolov8x
+  name: "yolov8n"
+  # 模型存放目录
+  model_dir: "models"
+  # 是否使用 GPU（cuda:0）或 CPU（cpu）
+  device: "cpu"
+  # 置信度阈值（低于此值的检测结果将被过滤）
+  conf_threshold: 0.5
+  # IoU 阈值（用于 NMS 非极大值抑制）
+  iou_threshold: 0.45
+
+# --- 输入配置 ---
+input:
+  # 输入图像目录
+  image_dir: "inputs/images"
+  # 输入视频目录
+  video_dir: "inputs/videos"
+
+# --- 输出配置 ---
+output:
+  # 输出图像目录
+  image_dir: "outputs/images"
+  # 输出视频目录
+  video_dir: "outputs/videos"
+  # 是否保存检测结果到文本文件
+  save_txt: false
+  # 文本结果保存目录
+  txt_dir: "outputs/labels"
+
+# --- 可视化配置 ---
+visualization:
+  # 边界框线条粗细（像素）
+  box_thickness: 2
+  # 字体大小
+  font_size: 12
+  # 边界框颜色 (B, G, R) 或 "auto" 自动按类别分配
+  box_color: "auto"
+  # 标签背景颜色
+  label_bg_color: "auto"
+  # 是否显示置信度
+  show_confidence: true
