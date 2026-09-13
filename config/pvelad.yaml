@@ -1,0 +1,16 @@
+# PVEL-AD 数据集配置 (由 scripts/prepare_data.py 自动生成)
+
+path: e:/study/计算机视觉综合实践/YOLOv8-Detector/data/PVEL-AD
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: finger
+  1: crack
+  2: black_core
+  3: thick_line
+  4: horizontal_dislocation
+  5: short_circuit
+  6: vertical_dislocation
+  7: star_crack

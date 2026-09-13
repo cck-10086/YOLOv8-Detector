@@ -2,32 +2,40 @@
 
 基于 **Ultralytics YOLOv8** 框架的目标检测系统，支持图像/视频/摄像头实时目标检测、ONNX 轻量化部署、性能对比测试和结果可视化。
 
+在通用检测能力之上，本项目扩展了**光伏电池 EL 图像缺陷检测**模块（课程项目：基于YOLOv8的光伏电池片EL图像缺陷检测方法研究与应用），基于 PVEL-AD 数据集实现缺陷检测模型的训练、评估与注意力机制改进。
+
 ---
 
 ## 📁 项目结构
 
 ```
-Chapter06/
+YOLOv8-Detector/
 ├── config/
 │   ├── config.yaml              # 配置文件（模型、输入输出、可视化参数）
-│   └── coco.names               # COCO 80 类别名称（用于 OpenCV-DNN）
+│   ├── coco.names               # COCO 80 类别名称（用于 OpenCV-DNN）
+│   ├── pvelad.yaml              # PVEL-AD 缺陷检测数据集配置（prepare_data.py 生成）
+│   └── yolov8n-ca.yaml          # 改进模型结构（嵌入坐标注意力 CoordAtt）
 ├── models/                      # 模型目录（.pt/.onnx 运行时自动下载）
-│   ├── yolov8n.pt               # YOLOv8 nano 预训练模型 (PyTorch)
-│   └── yolov8n.onnx             # ONNX 导出模型（轻量化部署用）
+├── data/
+│   ├── raw/                     # 原始数据集（PVEL-AD.zip）
+│   └── PVEL-AD/                 # 准备好的 YOLO 格式数据（images/ + labels/）
+├── scripts/
+│   └── prepare_data.py          # 数据准备（XML→YOLO转换、类别均衡采样、数据集划分）
 ├── inputs/
 │   └── images/
 │       └── test_sample.jpg      # 测试图像（停止标志）
-├── outputs/
-│   ├── images/                  # 图像检测结果输出
-│   └── videos/                  # 视频检测结果输出
+├── outputs/                     # 检测结果输出
+├── runs/
+│   ├── train/                   # 训练输出（权重、日志、曲线）
+│   └── val/                     # 评估输出（混淆矩阵、PR曲线）
 ├── src/
-│   ├── __init__.py              # 包初始化
 │   ├── detector.py              # 核心检测模块
-│   │   ├── YOLODetector         #   PyTorch 推理检测器
-│   │   └── OptimizedDetector    #   OpenCV-DNN 轻量化检测器 (ONNX)
-│   ├── visualizer.py            # 可视化模块（边界框、标签、置信度、对比图）
-│   └── utils.py                 # 工具模块（模型下载、ONNX导出、类别映射）
-├── main.py                      # 主程序入口（8 种运行模式）
+│   ├── visualizer.py            # 可视化模块
+│   ├── utils.py                 # 工具模块（模型下载、ONNX导出、类别映射）
+│   └── coordatt.py              # 坐标注意力模块（CVPR 2021, 用于模型改进）
+├── main.py                      # 主程序入口（8 种推理模式）
+├── train.py                     # 训练入口（基线/改进模型）
+├── eval.py                      # 评估入口（多模型指标对比）
 ├── requirements.txt             # Python 依赖列表
 └── README.md                    # 本文件
 ```
@@ -49,7 +57,7 @@ Chapter06/
 ### 2. 安装依赖
 
 ```bash
-cd Chapter06
+cd YOLOv8-Detector
 pip install -r requirements.txt
 ```
 
@@ -58,6 +66,52 @@ pip install -r requirements.txt
 ```bash
 python main.py --mode download --model yolov8n yolov8s yolov8m yolov8l yolov8x
 ```
+
+---
+
+## ☀️ 光伏EL缺陷检测扩展（课程项目模块）
+
+基于 [PVEL-AD 数据集](https://github.com/binyisu/PVEL-AD)（河北工业大学 & 北京航空航天大学，IEEE TII）的光伏电池片 EL 图像缺陷检测。
+
+### 1. 数据准备
+
+```bash
+# 下载原始数据集放置到 data/raw/PVEL-AD.zip，然后一键准备
+python scripts/prepare_data.py --zip data/raw/PVEL-AD.zip
+
+# 主要步骤: 解压 -> VOC XML 转 YOLO 格式 -> 类别均衡采样 -> train/val 分层划分 -> 生成数据配置
+# 默认使用 8 类主要缺陷 (finger/crack/black_core/thick_line/横纵向错位/短路/星形裂纹)
+# 加 --all-classes 使用全部 12 类; --max-per-class 控制高频类降采样上限
+```
+
+### 2. 模型训练
+
+```bash
+# 基线模型 (COCO 预训练权重迁移学习)
+python train.py --model yolov8n
+
+# 改进模型 (P3/P4/P5 检测尺度嵌入坐标注意力 CoordAtt)
+python train.py --model config/yolov8n-ca.yaml
+
+# 常用参数: --epochs 100 --batch 16 --imgsz 640 --device cuda:0
+```
+
+### 3. 模型评估
+
+```bash
+# 验证集评估
+python eval.py --model runs/train/yolov8n/weights/best.pt
+
+# 测试集评估 + 基线/改进模型对比
+python eval.py --model runs/train/yolov8n/weights/best.pt runs/train/yolov8n-ca/weights/best.pt --split test
+```
+
+输出指标: 精确率 P、召回率 R、mAP50、mAP50-95、推理速度；混淆矩阵与 PR 曲线保存在 `runs/val/`。
+
+### 4. 改进说明
+
+- **坐标注意力 (CA)**：沿水平/垂直方向分别池化生成方向感知权重，增强小目标与低对比度缺陷（裂纹、断栅）的特征提取，参数量增加可忽略（见 `src/coordatt.py`，论文 CVPR 2021）
+- **类别均衡采样**：PVEL-AD 呈长尾分布（finger 类约 2.5 万框 vs scratch 类仅 8 框），训练时对高频类降采样、稀缺类图像全保留
 
 ---
 

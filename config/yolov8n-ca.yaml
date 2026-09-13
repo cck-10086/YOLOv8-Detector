@@ -1,0 +1,41 @@
+# YOLOv8n-CA: 嵌入坐标注意力(CoordAtt)的改进模型
+# 改进策略: 在头部 P3/P4/P5 三个检测尺度的 C2f 之后各插入一个 CoordAtt 模块,
+#           增强小目标与低对比度缺陷(裂纹/断栅)的方向感知特征提取能力
+# 注意: CoordAtt 通道数按 yolov8n 尺度(width=0.25)写死, 更换尺度需同步调整
+
+nc: 8 # 类别数 (PVEL-AD 8类主要缺陷)
+scales:
+  # [depth, width, max_channels]
+  n: [0.33, 0.25, 1024]
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [64, 3, 2]] # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
+  - [-1, 3, C2f, [128, True]]
+  - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
+  - [-1, 6, C2f, [256, True]]
+  - [-1, 1, Conv, [512, 3, 2]] # 5-P4/16
+  - [-1, 6, C2f, [512, True]]
+  - [-1, 1, Conv, [1024, 3, 2]] # 7-P5/32
+  - [-1, 3, C2f, [1024, True]]
+  - [-1, 1, SPPF, [1024, 5]] # 9
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10
+  - [[-1, 6], 1, Concat, [1]] # 11 cat backbone P4
+  - [-1, 3, C2f, [512]] # 12
+  - [-1, 1, CoordAtt, [128]] # 13 坐标注意力 (P4, 128通道)
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 14
+  - [[-1, 4], 1, Concat, [1]] # 15 cat backbone P3
+  - [-1, 3, C2f, [256]] # 16
+  - [-1, 1, CoordAtt, [64]] # 17 坐标注意力 (P3/8-small, 64通道)
+  - [-1, 1, Conv, [256, 3, 2]] # 18
+  - [[-1, 13], 1, Concat, [1]] # 19 cat head P4
+  - [-1, 3, C2f, [512]] # 20
+  - [-1, 1, CoordAtt, [128]] # 21 坐标注意力 (P4/16-medium, 128通道)
+  - [-1, 1, Conv, [512, 3, 2]] # 22
+  - [[-1, 9], 1, Concat, [1]] # 23 cat head P5
+  - [-1, 3, C2f, [1024]] # 24
+  - [-1, 1, CoordAtt, [256]] # 25 坐标注意力 (P5/32-large, 256通道)
+  - [[17, 21, 25], 1, Detect, [nc]] # 26 Detect(P3, P4, P5)
