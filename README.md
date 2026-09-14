@@ -122,7 +122,11 @@ python eval.py --model runs/train/yolov8n/weights/best.pt runs/train/yolov8n-ca2
 |------|-----------|-----------|---------------|---------|------|
 | YOLOv8n 基线 | 0.882 | **0.811** | 0.515 | 4.5ms/张 | 96 epoch 早停收敛 |
 | YOLOv8n-CA 插入式 v1 | 0.675 | 0.612 | 0.423 | 3.5ms/张 | 负结果（见下） |
-| YOLOv8n-CA2 继承式 v2 | - | - | - | - | 训练中 |
+| YOLOv8n-CA2 继承式 v2 | 0.896 | **0.827** | 0.516 | 3.3ms/张 | **最优：超越基线 +1.6pt** |
+| YOLOv8n-CA 仅浅层 (2,4) | - | - | - | - | 消融训练中 |
+| YOLOv8n-CA 仅深层 (6,8) | - | - | - | - | 消融排队中 |
+
+**CA2 分类别表现（test）**：纵向错位 0.643→**0.774（+13.1pt）**、横向错位 0.890→**0.931（+4.1pt）**——两类方向性位移缺陷显著提升，与坐标注意力的方向感知机制预期一致；裂纹 0.614（-2.7pt）为局限性，细线状缺陷或需更高分辨率输入（论文中作为未来工作分析）。
 
 **基线分类别表现（test）**：短路 0.994、黑芯 0.988、断栅 0.937、横向错位 0.890 已近饱和；星形裂纹 0.702、增厚栅线 0.699、纵向错位 0.643、**裂纹 0.641** 仍有提升空间——细线状低对比度缺陷正是注意力改进的目标方向。
 
@@ -130,7 +134,22 @@ python eval.py --model runs/train/yolov8n/weights/best.pt runs/train/yolov8n-ca2
 
 **继承式 v2 设计**：C2f_CA 继承原生 C2f，forward 中对每个 Bottleneck 输出施加 CA；参数名与 C2f 完全一致，通过 `inject_coord_attention()` 在构建后原地替换 backbone C2f——预训练权重 100% 保留，CA 新增参数仅 6.3K（总参数 3.16M 的 0.2%）。
 
-### 5. 改进说明
+### 5. ONNX 部署
+
+```bash
+# 导出 ONNX + 双后端精度一致性验证 (PyTorch vs onnxruntime)
+python scripts/export_onnx.py
+
+# 纯 onnxruntime 独立推理演示 (无 PyTorch/Ultralytics 依赖, 中文标签可视化)
+python scripts/onnx_infer.py --conf 0.25
+```
+
+**部署验证结论**：
+- 导出数值无损：随机输入下双后端输出张量最大绝对误差 ~1e-3（float32 精度内）；验证集 mAP50 双后端偏差 0.0077（<1%，源于 NMS 边界效应，非导出损失）
+- 独立运行：`onnx_infer.py` 仅依赖 onnxruntime + numpy + opencv + pillow，模拟产线部署环境，CPU 推理 39.6ms/张，检出结果带中文类别标签
+- 文件体积：.pt 17.6MB → .onnx 更轻量，适合边缘设备部署
+
+### 6. 改进说明
 
 - **坐标注意力 (CA)**：沿水平/垂直方向分别池化生成方向感知权重，增强小目标与低对比度缺陷（裂纹、断栅）的特征提取（见 `src/coordatt.py`，论文 CVPR 2021）
 - **类别均衡采样**：PVEL-AD 呈长尾分布（finger 类约 2.5 万框 vs scratch 类仅 8 框），训练时对高频类降采样、稀缺类图像全保留
