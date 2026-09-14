@@ -12,7 +12,10 @@ YOLOv8 光伏电池EL缺陷检测 - 训练入口
   # 训练基线模型
   python train.py --model yolov8n
 
-  # 训练改进模型 (坐标注意力)
+  # 训练改进模型 (坐标注意力注入 backbone 四个 C2f)
+  python train.py --model yolov8n --ca 2,4,6,8
+
+  # 训练插入式改进模型 (旧方案, 可作消融对比)
   python train.py --model config/yolov8n-ca.yaml
 
   # 自定义超参数
@@ -115,6 +118,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--ca",
+        type=str,
+        default=None,
+        help="坐标注意力注入的 backbone C2f 层索引, 如 2,4,6,8 (默认: 不注入)",
+    )
+
+    parser.add_argument(
         "--resume",
         type=str,
         default=None,
@@ -137,10 +147,9 @@ def main():
 
     from ultralytics import YOLO
 
-    # 若使用改进结构, 注册自定义模块 (CoordAtt), 使 YAML 可引用
-    if "ca.yaml" in args.model.lower():
-        from src.coordatt import register_custom_modules
-        register_custom_modules()
+    # 注册自定义模块 (CoordAtt): 改进结构训练及断点恢复时反序列化模型需要, 注册操作可重复执行
+    from src.coordatt import register_custom_modules
+    register_custom_modules()
 
     # 路径处理: 相对路径以项目根目录为基准解析
     model_arg = args.model if os.path.isabs(args.model) else os.path.join(PROJECT_ROOT, args.model)
@@ -155,6 +164,14 @@ def main():
         if pretrained.lower() != "none":
             model.load(pretrained)
             print(f"[INFO] 已加载预训练权重: {pretrained} (匹配层迁移)")
+
+    # 坐标注意力注入: 将 backbone 指定层 C2f 原地升级为 C2f_CA (原有权重全量保留, 仅新增 ca 分支)
+    if args.ca and not args.resume:
+        from src.coordatt import inject_coord_attention
+
+        stages = [int(s) for s in args.ca.split(",") if s.strip()]
+        info = inject_coord_attention(model.model, stages=stages)
+        print(f"[INFO] {info}")
 
     # 启动训练 (训练完成后 Ultralytics 自动在 val 集评估)
     # project 使用绝对路径, 避免 Ultralytics 将相对路径解析到其全局 runs_dir

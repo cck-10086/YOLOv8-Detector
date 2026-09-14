@@ -90,10 +90,16 @@ python scripts/prepare_data.py --zip data/raw/PVEL-AD.zip
 # 基线模型 (COCO 预训练权重迁移学习)
 python train.py --model yolov8n
 
-# 改进模型 (P3/P4/P5 检测尺度嵌入坐标注意力 CoordAtt)
+# 改进模型 (坐标注意力注入 backbone 四个 C2f, 预训练权重全量保留) —— 推荐
+python train.py --model yolov8n --ca 2,4,6,8
+
+# 改进模型 (插入式旧方案: P3/P4/P5 检测尺度嵌入 CoordAtt, 可作消融对比)
 python train.py --model config/yolov8n-ca.yaml
 
 # 常用参数: --epochs 100 --batch 16 --imgsz 640 --device cuda:0
+
+# 断点恢复 (中断后从 last.pt 继续, 进度不丢失)
+python train.py --resume runs/train/<run名>/weights/last.pt
 ```
 
 ### 3. 模型评估
@@ -102,15 +108,31 @@ python train.py --model config/yolov8n-ca.yaml
 # 验证集评估
 python eval.py --model runs/train/yolov8n/weights/best.pt
 
-# 测试集评估 + 基线/改进模型对比
-python eval.py --model runs/train/yolov8n/weights/best.pt runs/train/yolov8n-ca/weights/best.pt --split test
+# 测试集评估 + 多模型对比
+python eval.py --model runs/train/yolov8n/weights/best.pt runs/train/yolov8n-ca2/weights/best.pt --split test
 ```
 
 输出指标: 精确率 P、召回率 R、mAP50、mAP50-95、推理速度；混淆矩阵与 PR 曲线保存在 `runs/val/`。
 
-### 4. 改进说明
+### 4. 实验结果
 
-- **坐标注意力 (CA)**：沿水平/垂直方向分别池化生成方向感知权重，增强小目标与低对比度缺陷（裂纹、断栅）的特征提取，参数量增加可忽略（见 `src/coordatt.py`，论文 CVPR 2021）
+**数据集**：PVEL-AD（12 类缺陷、40358 个边界框），类别均衡采样后 train 4102 张 / val 898 张 / test 19150 张。
+
+| 模型 | val mAP50 | test mAP50 | test mAP50-95 | 推理速度 | 状态 |
+|------|-----------|-----------|---------------|---------|------|
+| YOLOv8n 基线 | 0.882 | **0.811** | 0.515 | 4.5ms/张 | 96 epoch 早停收敛 |
+| YOLOv8n-CA 插入式 v1 | 0.675 | 0.612 | 0.423 | 3.5ms/张 | 负结果（见下） |
+| YOLOv8n-CA2 继承式 v2 | - | - | - | - | 训练中 |
+
+**基线分类别表现（test）**：短路 0.994、黑芯 0.988、断栅 0.937、横向错位 0.890 已近饱和；星形裂纹 0.702、增厚栅线 0.699、纵向错位 0.643、**裂纹 0.641** 仍有提升空间——细线状低对比度缺陷正是注意力改进的目标方向。
+
+**插入式 v1 负结果分析**：在 neck 输出处插入 4 个 CoordAtt 层导致层索引偏移，COCO 预训练权重仅迁移 186/399 项（47%），neck+head 实际从零训练，100 epoch 内两类错位缺陷完全失效（mAP50=0）。该结果说明：**注意力改进若破坏迁移学习链路，代价远大于收益**。
+
+**继承式 v2 设计**：C2f_CA 继承原生 C2f，forward 中对每个 Bottleneck 输出施加 CA；参数名与 C2f 完全一致，通过 `inject_coord_attention()` 在构建后原地替换 backbone C2f——预训练权重 100% 保留，CA 新增参数仅 6.3K（总参数 3.16M 的 0.2%）。
+
+### 5. 改进说明
+
+- **坐标注意力 (CA)**：沿水平/垂直方向分别池化生成方向感知权重，增强小目标与低对比度缺陷（裂纹、断栅）的特征提取（见 `src/coordatt.py`，论文 CVPR 2021）
 - **类别均衡采样**：PVEL-AD 呈长尾分布（finger 类约 2.5 万框 vs scratch 类仅 8 框），训练时对高频类降采样、稀缺类图像全保留
 
 ---
