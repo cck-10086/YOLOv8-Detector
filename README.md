@@ -154,7 +154,20 @@ python scripts/onnx_infer.py --conf 0.25
 - 独立运行：`onnx_infer.py` 仅依赖 onnxruntime + numpy + opencv + pillow，模拟产线部署环境，CPU 推理 39.6ms/张，检出结果带中文类别标签
 - 文件体积：.pt 17.6MB → .onnx 更轻量，适合边缘设备部署
 
-### 6. 改进说明
+### 6. 结果可视化
+
+```bash
+python scripts/visualize.py   # 一键生成全部论文图 -> results/figures/
+```
+
+| 图片 | 内容 |
+|------|------|
+| `fig1_training_curves.png` | 训练曲线：五模型 mAP 对比 + 基线vs改进 loss 曲线（CA2 分类损失从起步即远低于基线，直接体现注意力特征判别性） |
+| `fig2_class_ap.png` | 分类别 AP50 对比条形图（纵向错位 +13.1pt 醒目标注） |
+| `fig3_class_distribution.png` | 训练集类别实例分布（长尾形态与均衡采样结果） |
+| `fig4_detection_compare.png` | 真实检测效果对比：3 组样例（纵错/裂纹/横错），CA2 裂纹检出置信度 0.55→0.90 且碎框合并 |
+
+### 7. 改进说明
 
 - **坐标注意力 (CA)**：沿水平/垂直方向分别池化生成方向感知权重，增强小目标与低对比度缺陷（裂纹、断栅）的特征提取（见 `src/coordatt.py`，论文 CVPR 2021）
 - **类别均衡采样**：PVEL-AD 呈长尾分布（finger 类约 2.5 万框 vs scratch 类仅 8 框），训练时对高频类降采样、稀缺类图像全保留
