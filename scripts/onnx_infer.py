@@ -122,7 +122,7 @@ def main():
     parser = argparse.ArgumentParser(description="ONNX 独立部署推理演示")
     parser.add_argument("--onnx", type=str,
                         default=os.path.join(os.path.dirname(os.path.dirname(
-                            os.path.abspath(__file__))), "runs/train/yolov8n-ca22/weights/best.onnx"))
+                            os.path.abspath(__file__))), "runs/train/train5/weights/best.onnx"))
     parser.add_argument("--image", type=str, default=None, help="待推理图片 (默认自动挑选验证集多目标图)")
     parser.add_argument("--conf", type=float, default=0.25, help="置信度阈值")
     args = parser.parse_args()
