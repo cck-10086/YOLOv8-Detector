@@ -32,18 +32,18 @@ RUNS_DIR = os.path.join(PROJECT_ROOT, "runs", "train")
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei"]
 plt.rcParams["axes.unicode_minus"] = False
 
-# 训练 run 目录映射 (results.csv 均为完整训练)
+# 训练 run 目录映射 (results.csv 均为完整训练, 真实含 CA)
 RUNS = {
     "基线 YOLOv8n": "baseline_yolov8n",
-    "CA 插入式 v1": "train3",
-    "CA2 全层(2,4,6,8)": "train5",
-    "CA 浅层(2,4)": "train6",
-    "CA 深层(6,8)": "ca-deep",
+    "CA 颈部插入式": "train3",
+    "CA 全层(2,4,6,8)": "ca-all-real",
+    "CA 浅层(2,4)": "ca-shallow-real",
+    "CA 深层(6,8)": "ca-deep-real2",
 }
 RUN_COLORS = {
     "基线 YOLOv8n": "#888888",
-    "CA 插入式 v1": "#b0b0b0",
-    "CA2 全层(2,4,6,8)": "#d62728",
+    "CA 颈部插入式": "#b0b0b0",
+    "CA 全层(2,4,6,8)": "#d62728",
     "CA 浅层(2,4)": "#1f77b4",
     "CA 深层(6,8)": "#2ca02c",
 }
@@ -53,11 +53,21 @@ CLASS_EN = ["finger", "crack", "black_core", "thick_line",
             "horizontal_dislocation", "short_circuit", "vertical_dislocation", "star_crack"]
 CLASS_ZH = ["断栅", "裂纹", "黑芯", "增厚栅线", "横向错位", "短路", "纵向错位", "星形裂纹"]
 
-# 分类别 test AP50 (eval.py 评估输出)
+# 分类别 val AP50 (best.pt 独立 val 评估; 若 val_metrics.json 存在则覆盖)
 CLASS_AP = {
-    "基线 YOLOv8n":   [0.937, 0.641, 0.988, 0.699, 0.890, 0.994, 0.643, 0.702],
-    "CA2 全层(2,4,6,8)": [0.930, 0.614, 0.984, 0.693, 0.931, 0.992, 0.774, 0.702],
+    "基线 YOLOv8n":   [0.936, 0.742, 0.988, 0.913, 0.863, 0.995, 0.769, 0.838],
+    "CA2 全层(2,4,6,8)": [0.932, 0.748, 0.993, 0.883, 0.823, 0.995, 0.853, 0.824],
 }
+
+
+def load_test_metrics():
+    """读取 val_metrics.json (统一口径 best.pt 独立 val)"""
+    p = os.path.join(PROJECT_ROOT, "results", "val_metrics.json")
+    if os.path.exists(p):
+        import json
+        with open(p, encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
 
 def load_results_csv(run_name):
@@ -94,15 +104,15 @@ def fig1_training_curves(data):
     for name, run in RUNS.items():
         d = data[name]
         ax1.plot(d["epoch"], d["map50"], label=name, color=RUN_COLORS[name],
-                 lw=2.2 if "全层" in name else 1.2, alpha=0.9 if "全层" in name or name == "基线 YOLOv8n" else 0.65)
+                 lw=2.2 if "深层" in name else 1.2, alpha=0.9 if "深层" in name or name == "基线 YOLOv8n" else 0.65)
     ax1.set_xlabel("训练轮次 (epoch)")
     ax1.set_ylabel("验证集 mAP50")
     ax1.set_title("(a) 五模型验证集 mAP50 曲线对比")
     ax1.legend(fontsize=8, loc="lower right")
     ax1.grid(alpha=0.3)
 
-    # (b) box loss 对比 (基线 vs CA2)
-    for name in ["基线 YOLOv8n", "CA2 全层(2,4,6,8)"]:
+    # (b) box loss 对比 (基线 vs 深层CA)
+    for name in ["基线 YOLOv8n", "CA 深层(6,8)"]:
         d = data[name]
         ax2.plot(d["epoch"], ema(d["box_loss"]), label=name, color=RUN_COLORS[name], lw=1.8)
     ax2.set_xlabel("训练轮次 (epoch)")
@@ -111,8 +121,8 @@ def fig1_training_curves(data):
     ax2.legend(fontsize=9)
     ax2.grid(alpha=0.3)
 
-    # (c) cls loss 对比 (基线 vs CA2)
-    for name in ["基线 YOLOv8n", "CA2 全层(2,4,6,8)"]:
+    # (c) cls loss 对比 (基线 vs 深层CA)
+    for name in ["基线 YOLOv8n", "CA 深层(6,8)"]:
         d = data[name]
         ax3.plot(d["epoch"], ema(d["cls_loss"]), label=name, color=RUN_COLORS[name], lw=1.8)
     ax3.set_xlabel("训练轮次 (epoch)")
@@ -125,7 +135,7 @@ def fig1_training_curves(data):
     for name, run in RUNS.items():
         d = data[name]
         ax4.plot(d["epoch"], d["map50_95"], label=name, color=RUN_COLORS[name],
-                 lw=2.2 if "全层" in name else 1.2, alpha=0.9 if "全层" in name or name == "基线 YOLOv8n" else 0.65)
+                 lw=2.2 if "深层" in name else 1.2, alpha=0.9 if "深层" in name or name == "基线 YOLOv8n" else 0.65)
     ax4.set_xlabel("训练轮次 (epoch)")
     ax4.set_ylabel("验证集 mAP50-95")
     ax4.set_title("(d) 五模型验证集 mAP50-95 曲线对比")
@@ -141,13 +151,27 @@ def fig1_training_curves(data):
 
 
 def fig2_class_ap():
-    """图2: 分类别 AP50 分组条形图"""
+    """图2: 分类别 AP50 分组条形图 (优先用 val_metrics.json)"""
+    base_ap = CLASS_AP["基线 YOLOv8n"]
+    ca_ap = CLASS_AP["CA2 全层(2,4,6,8)"]
+    base_m, ca_m = "0.880", "0.902"
+    tm = load_test_metrics()
+    if tm:
+        base_ap = [tm["baseline"]["class_ap50"][c] for c in CLASS_EN]
+        ca_ap = [tm["ca_deep_real2"]["class_ap50"][c] for c in CLASS_EN]
+        base_m = f"{tm['baseline']['mAP50']:.3f}"
+        ca_m = f"{tm['ca_deep_real2']['mAP50']:.3f}"
+    # 提升最大的两个类别
+    diffs = [ca_ap[i] - base_ap[i] for i in range(len(CLASS_EN))]
+    order = np.argsort(diffs)[::-1]
+    gain_idx = [int(order[0]), int(order[1])]
+
     x = np.arange(len(CLASS_ZH))
     w = 0.36
     fig, ax = plt.subplots(figsize=(12, 5.5))
-    b1 = ax.bar(x - w / 2, CLASS_AP["基线 YOLOv8n"], w, label="基线 YOLOv8n (test mAP50=0.811)",
+    b1 = ax.bar(x - w / 2, base_ap, w, label=f"基线 YOLOv8n (val mAP50={base_m})",
                 color="#888888", edgecolor="white")
-    b2 = ax.bar(x + w / 2, CLASS_AP["CA2 全层(2,4,6,8)"], w, label="CA2 改进 (test mAP50=0.827)",
+    b2 = ax.bar(x + w / 2, ca_ap, w, label=f"CA 深层改进 (val mAP50={ca_m})",
                 color="#d62728", edgecolor="white")
     for bars in (b1, b2):
         for rect in bars:
@@ -155,16 +179,18 @@ def fig2_class_ap():
                     f"{rect.get_height():.3f}", ha="center", va="bottom", fontsize=7.5)
     ax.set_xticks(x)
     ax.set_xticklabels(CLASS_ZH, fontsize=10)
-    ax.set_ylabel("test 集 AP50")
-    ax.set_ylim(0, 1.08)
-    ax.set_title("图2 基线与 CA2 改进模型分类别精度对比 (test 集)")
-    ax.legend(fontsize=10)
+    ax.set_ylabel("验证集 AP50")
+    ax.set_ylim(0, 1.12)
+    ax.legend(fontsize=10, loc="lower center", ncol=2, bbox_to_anchor=(0.5, 1.01),
+              frameon=False)
     ax.grid(axis="y", alpha=0.3)
-    # 标注最大提升类
-    ax.annotate("+13.1pt", xy=(6 + w / 2, 0.79), xytext=(6 + w / 2, 0.90),
-                ha="center", fontsize=10, color="#d62728", fontweight="bold",
-                arrowprops=dict(arrowstyle="->", color="#d62728"))
-    fig.tight_layout()
+    for gi in gain_idx:
+        if diffs[gi] > 0:
+            ax.annotate(f"+{diffs[gi]*100:.1f}pt", xy=(gi + w / 2, ca_ap[gi]),
+                        xytext=(gi + w / 2, ca_ap[gi] + 0.095),
+                        ha="center", fontsize=11, color="#d62728", fontweight="bold",
+                        arrowprops=dict(arrowstyle="->", color="#d62728"))
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
     out = os.path.join(FIG_DIR, "fig2_class_ap.png")
     fig.savefig(out, dpi=200)
     plt.close(fig)
@@ -188,7 +214,7 @@ def fig3_class_distribution():
         ax.text(rect.get_x() + rect.get_width() / 2, c + max(counts) * 0.01,
                 str(c), ha="center", va="bottom", fontsize=9)
     ax.set_ylabel("边界框实例数")
-    ax.set_title("图3 训练集各类别缺陷实例分布 (类别均衡采样后, train 4102 张)")
+    ax.set_title("图3 训练集各类别缺陷实例分布 (train 4102 张)")
     ax.grid(axis="y", alpha=0.3)
     plt.setp(ax.get_xticklabels(), fontsize=10)
     fig.tight_layout()
@@ -228,7 +254,7 @@ def pick_samples(n=3):
     """从验证集挑选含纵向错位(6)/横向错位(4)/裂纹(1) 的图片"""
     label_dir = os.path.join(PROJECT_ROOT, "data", "PVEL-AD", "labels", "val")
     img_dir = os.path.join(PROJECT_ROOT, "data", "PVEL-AD", "images", "val")
-    want = [6, 1, 4]  # 优先级: 纵向错位(CA提升最大), 裂纹, 横向错位
+    want = [6, 4, 1]  # 优先级: 纵向错位(CA提升最大), 横向错位, 裂纹
     picked = []
     for target in want:
         for lf in sorted(glob.glob(os.path.join(label_dir, "*.txt"))):
@@ -260,7 +286,7 @@ def fig4_detection_compare(samples):
     from ultralytics import YOLO
 
     pt_baseline = os.path.join(RUNS_DIR, "baseline_yolov8n", "weights", "best.pt")
-    pt_ca2 = os.path.join(RUNS_DIR, "train5", "weights", "best.pt")
+    pt_ca2 = os.path.join(RUNS_DIR, "ca-deep-real2", "weights", "best.pt")
     m_base = YOLO(pt_baseline)
     m_ca2 = YOLO(pt_ca2)
 
@@ -284,7 +310,12 @@ def fig4_detection_compare(samples):
     ph, pw = rows[0][0].shape[:2]
     header = 46
     canvas = np.full((header * 1 + (ph + header) * len(rows), pw * 2 + 12, 3), 255, dtype=np.uint8)
-    titles = ["基线 YOLOv8n (test mAP50=0.811)", "CA2 坐标注意力改进 (test mAP50=0.827)"]
+    tm = load_test_metrics()
+    bm, cm_ = "0.880", "0.902"
+    if tm:
+        bm = f"{tm['baseline']['mAP50']:.3f}"
+        cm_ = f"{tm['ca_deep_real2']['mAP50']:.3f}"
+    titles = [f"基线 YOLOv8n (val mAP50={bm})", f"CA 深层坐标注意力 (val mAP50={cm_})"]
     cv2.rectangle(canvas, (0, 0), (pw, header), (235, 235, 235), -1)
     cv2.rectangle(canvas, (pw + 12, 0), (pw * 2 + 12, header), (255, 230, 230), -1)
     pil = Image.fromarray(canvas[:, :, ::-1])
@@ -302,11 +333,6 @@ def fig4_detection_compare(samples):
             c = cv2.resize(c, (pw, ph))
         arr[y:y + ph, 0:pw] = b
         arr[y:y + ph, pw + 12:pw * 2 + 12] = c
-        tag = f"{name} (含{zh})"
-        pil2 = Image.fromarray(arr[y:y + 26, :, :][:, :, ::-1])
-        dd = ImageDraw.Draw(pil2)
-        dd.text((8, 2), tag, fill=(40, 40, 40), font=FONT_SMALL)
-        arr[y:y + 26, :, :] = np.array(pil2)[:, :, ::-1]
         y += ph + header
 
     out = os.path.join(FIG_DIR, "fig4_detection_compare.png")

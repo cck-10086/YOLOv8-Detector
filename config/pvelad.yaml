@@ -1,6 +1,6 @@
 # PVEL-AD 数据集配置 (由 scripts/prepare_data.py 自动生成)
 
-path: e:/study/计算机视觉综合实践/YOLOv8-Detector/data/PVEL-AD
+path: e:/study/计算机视觉综合实践/课程论文/YOLOv8-Detector/data/PVEL-AD
 train: images/train
 val: images/val
 test: images/test
