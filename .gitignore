@@ -1,6 +1,7 @@
 # 数据与训练输出 (体积大, 不入库)
 data/
 runs/
+_archive/
 *.pt
 *.onnx
 

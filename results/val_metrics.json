@@ -1,0 +1,150 @@
+{
+  "baseline": {
+    "P": 0.7992202973160911,
+    "R": 0.8417015284216909,
+    "mAP50": 0.8804024698595081,
+    "mAP50-95": 0.5981367489026207,
+    "speed_inference_ms": 4.631360356347468,
+    "class_ap50": {
+      "finger": 0.9356,
+      "crack": 0.7422,
+      "black_core": 0.9883,
+      "thick_line": 0.9131,
+      "horizontal_dislocation": 0.8627,
+      "short_circuit": 0.9947,
+      "vertical_dislocation": 0.769,
+      "star_crack": 0.8376
+    },
+    "class_ap50_zh": {
+      "断栅": 0.9356,
+      "裂纹": 0.7422,
+      "黑芯": 0.9883,
+      "增厚栅线": 0.9131,
+      "横向错位": 0.8627,
+      "短路": 0.9947,
+      "纵向错位": 0.769,
+      "星形裂纹": 0.8376
+    },
+    "class_ap5095": {
+      "finger": 0.5588,
+      "crack": 0.5132,
+      "black_core": 0.9508,
+      "thick_line": 0.4952,
+      "horizontal_dislocation": 0.3506,
+      "short_circuit": 0.9736,
+      "vertical_dislocation": 0.3717,
+      "star_crack": 0.5713
+    }
+  },
+  "ca_all_real": {
+    "P": 0.8173854608808803,
+    "R": 0.8254086161445842,
+    "mAP50": 0.8813628575676329,
+    "mAP50-95": 0.5882391491288331,
+    "speed_inference_ms": 6.659210579064525,
+    "class_ap50": {
+      "finger": 0.9323,
+      "crack": 0.7475,
+      "black_core": 0.9927,
+      "thick_line": 0.8833,
+      "horizontal_dislocation": 0.823,
+      "short_circuit": 0.9949,
+      "vertical_dislocation": 0.8531,
+      "star_crack": 0.824
+    },
+    "class_ap50_zh": {
+      "断栅": 0.9323,
+      "裂纹": 0.7475,
+      "黑芯": 0.9927,
+      "增厚栅线": 0.8833,
+      "横向错位": 0.823,
+      "短路": 0.9949,
+      "纵向错位": 0.8531,
+      "星形裂纹": 0.824
+    },
+    "class_ap5095": {
+      "finger": 0.5392,
+      "crack": 0.5084,
+      "black_core": 0.9581,
+      "thick_line": 0.4967,
+      "horizontal_dislocation": 0.3265,
+      "short_circuit": 0.9833,
+      "vertical_dislocation": 0.3994,
+      "star_crack": 0.4944
+    }
+  },
+  "ca_deep_real2": {
+    "P": 0.8874795603805703,
+    "R": 0.8204021276962766,
+    "mAP50": 0.9016542564973506,
+    "mAP50-95": 0.6216372758285044,
+    "speed_inference_ms": 5.7483876391981985,
+    "class_ap50": {
+      "finger": 0.9288,
+      "crack": 0.7204,
+      "black_core": 0.9906,
+      "thick_line": 0.8446,
+      "horizontal_dislocation": 0.9653,
+      "short_circuit": 0.995,
+      "vertical_dislocation": 0.9237,
+      "star_crack": 0.8449
+    },
+    "class_ap50_zh": {
+      "断栅": 0.9288,
+      "裂纹": 0.7204,
+      "黑芯": 0.9906,
+      "增厚栅线": 0.8446,
+      "横向错位": 0.9653,
+      "短路": 0.995,
+      "纵向错位": 0.9237,
+      "星形裂纹": 0.8449
+    },
+    "class_ap5095": {
+      "finger": 0.5425,
+      "crack": 0.4918,
+      "black_core": 0.9568,
+      "thick_line": 0.482,
+      "horizontal_dislocation": 0.3884,
+      "short_circuit": 0.975,
+      "vertical_dislocation": 0.5878,
+      "star_crack": 0.5489
+    }
+  },
+  "ca_shallow_real": {
+    "P": 0.7572986149049115,
+    "R": 0.8562408235548882,
+    "mAP50": 0.8641498882428583,
+    "mAP50-95": 0.5783530092531194,
+    "speed_inference_ms": 2.654531514476659,
+    "class_ap50": {
+      "finger": 0.9397,
+      "crack": 0.7327,
+      "black_core": 0.9924,
+      "thick_line": 0.9149,
+      "horizontal_dislocation": 0.7889,
+      "short_circuit": 0.9937,
+      "vertical_dislocation": 0.7727,
+      "star_crack": 0.7784
+    },
+    "class_ap50_zh": {
+      "断栅": 0.9397,
+      "裂纹": 0.7327,
+      "黑芯": 0.9924,
+      "增厚栅线": 0.9149,
+      "横向错位": 0.7889,
+      "短路": 0.9937,
+      "纵向错位": 0.7727,
+      "星形裂纹": 0.7784
+    },
+    "class_ap5095": {
+      "finger": 0.5599,
+      "crack": 0.4929,
+      "black_core": 0.9499,
+      "thick_line": 0.5059,
+      "horizontal_dislocation": 0.3225,
+      "short_circuit": 0.9698,
+      "vertical_dislocation": 0.3481,
+      "star_crack": 0.4778
+    }
+  }
+}
