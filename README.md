@@ -28,8 +28,10 @@ ONNX 部署后的实际推理结果（`onnxruntime + OpenCV`，CPU 单张实时�
 
 ## 在线体验
 
-`demo/` 下是一个 Gradio 单页应用：上传一张电池片 EL 图像，返回带检测框的结果图、
-按类别统计的缺陷表和一段文字摘要，置信度与 NMS IoU 两个阈值可以在界面上调。
+**在线 Demo（魔搭创空间，国内直连、免费 CPU）**：
+<https://modelscope.cn/studios/cck10086/pv-defect-detector>
+
+本地也可以直接跑：
 
 ```bash
 pip install -r demo/requirements.txt
@@ -40,10 +42,11 @@ python demo/app.py     # 打开 http://127.0.0.1:7860
 
 ![Gradio demo](demo/screenshot.png)
 
-`demo/` 目录已按 HuggingFace Spaces 的格式准备好（入口 `app.py`、依赖
-`requirements.txt`、权重 `best.pt`、自定义模块 `src/`、元信息在 `demo/README.md`
-顶部），注册账号后在 Spaces 里新建一个 Gradio CPU 空间、把该目录内容传上去即可
-得到公网地址。详见 [`demo/README.md`](demo/README.md)。
+`demo/` 目录已按创空间的要求准备好（入口 `app.py`、依赖 `requirements.txt`、
+权重、自定义模块 `src/`、元信息在 `demo/README.md` 顶部）。HuggingFace Spaces 的
+Gradio/Docker 空间现在需要 PRO 付费，Static 空间又跑不了 Python，所以线上版本
+走的是魔搭。自己部署一份的步骤和两个已经踩过的坑（子目录被拍平、`.pt` 走 LFS
+导致 clone 失败）见 [`demo/README.md`](demo/README.md)。
 
 ---
 
