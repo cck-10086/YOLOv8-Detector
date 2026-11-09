@@ -10,6 +10,22 @@
 
 ---
 
+## 效果预览
+
+左为基线 YOLOv8n，右为深层 CA 改进模型（同一测试图，数字为置信度）。改进模型把重复误检的纵向/横向错位框收敛掉，并对裂纹给出更高置信度。
+
+![检测结果对比](results/figures/fig4_detection_compare.png)
+
+ONNX 部署后的实际推理结果（`onnxruntime + OpenCV`，CPU 单张实时）：
+
+![ONNX 部署推理](results/onnx_deploy_demo.jpg)
+
+| 训练过程对比 | 分类别 AP50 |
+| --- | --- |
+| ![训练曲线](results/figures/fig1_training_curves.png) | ![分类别 AP](results/figures/fig2_class_ap.png) |
+
+---
+
 ## 一、项目结构
 
 ```
