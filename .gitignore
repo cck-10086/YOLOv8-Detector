@@ -5,6 +5,9 @@ _archive/
 *.pt
 *.onnx
 
+# 例外: demo 权重 (6MB) 入库, 让 clone 下来就能跑起在线 demo
+!demo/best.pt
+
 # Python
 __pycache__/
 *.pyc

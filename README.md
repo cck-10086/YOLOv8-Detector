@@ -26,6 +26,27 @@ ONNX 部署后的实际推理结果（`onnxruntime + OpenCV`，CPU 单张实时�
 
 ---
 
+## 在线体验
+
+`demo/` 下是一个 Gradio 单页应用：上传一张电池片 EL 图像，返回带检测框的结果图、
+按类别统计的缺陷表和一段文字摘要，置信度与 NMS IoU 两个阈值可以在界面上调。
+
+```bash
+pip install -r demo/requirements.txt
+python demo/app.py     # 打开 http://127.0.0.1:7860
+```
+
+演示效果（上传 `img003707.jpg`，检出 1 处星状裂纹，置信度 0.76）：
+
+![Gradio demo](demo/screenshot.png)
+
+`demo/` 目录已按 HuggingFace Spaces 的格式准备好（入口 `app.py`、依赖
+`requirements.txt`、权重 `best.pt`、自定义模块 `src/`、元信息在 `demo/README.md`
+顶部），注册账号后在 Spaces 里新建一个 Gradio CPU 空间、把该目录内容传上去即可
+得到公网地址。详见 [`demo/README.md`](demo/README.md)。
+
+---
+
 ## 一、项目结构
 
 ```
