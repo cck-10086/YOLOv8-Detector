@@ -9,6 +9,7 @@
     python demo/app.py
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -20,11 +21,34 @@ ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
 
 # 权重是带自定义模块的 checkpoint，反序列化时要能 import 到 src.coordatt。
-# 本地跑时 src/ 在仓库根（ROOT 的上一级），部署到 HuggingFace Spaces 时
-# app.py 就在根目录、src/ 与它同级，所以两个位置都加进 sys.path。
+# 本地跑时 src/ 在仓库根（ROOT 的上一级），部署到创空间时 app.py 与
+# coordatt.py 同目录，所以两个位置都加进 sys.path。
 for _p in (str(PROJECT_ROOT), str(ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+
+def _ensure_src_package() -> None:
+    """保证 `import src.coordatt` 在任何目录布局下都成立。
+
+    checkpoint 里 pickle 的是 `src.coordatt.C2f_CA`，所以反序列化时必须有
+    一个名叫 src 的包。本地仓库根有 src/ 目录；创空间上传会把子目录拍平，
+    coordatt.py 直接落在根目录，这时用一个指向 ROOT 的命名空间包兜底。
+    """
+    try:
+        import src.coordatt  # noqa: F401
+        return
+    except Exception:
+        pass
+
+    import types
+
+    pkg = types.ModuleType("src")
+    pkg.__path__ = [str(PROJECT_ROOT / "src"), str(ROOT)]
+    sys.modules["src"] = pkg
+
+
+_ensure_src_package()
 
 # 类别中文名，用于界面展示；顺序与模型 names 一致
 CLASS_CN = {
@@ -39,7 +63,65 @@ CLASS_CN = {
 }
 
 ROOT = Path(__file__).resolve().parent
-WEIGHT = ROOT / "best.pt"
+
+# 权重文件名故意不用 .pt 后缀：创空间仓库的 .gitattributes 里 *.pt 会走
+# git-lfs，而该仓库的 LFS 下载链路报 "Mirror forwarding loop detected"，
+# 构建时 git clone 直接失败。换成 .weights 就是普通 git 对象，克隆正常。
+WEIGHT = ROOT / "best.weights"
+WEIGHT_SHA256 = "e683e08e9fa18efdd92f1ad3f600f8b99f1837ba7ab079aa8b8d4b0eb56dac1e"
+WEIGHT_URLS = [
+    "https://raw.githubusercontent.com/cck-10086/YOLOv8-Detector/main/demo/best.pt",
+    "https://cdn.jsdelivr.net/gh/cck-10086/YOLOv8-Detector@main/demo/best.pt",
+]
+
+
+def _ensure_weight() -> Path:
+    """仓库里带了 best.weights 就直接用；万一缺失再联网拉一份并校验。"""
+    if WEIGHT.exists() and WEIGHT.stat().st_size > 1_000_000:
+        return WEIGHT
+
+    import hashlib
+    import urllib.request
+
+    errors = []
+    for url in WEIGHT_URLS:
+        tmp = WEIGHT.with_name("best.weights.part")
+        try:
+            with urllib.request.urlopen(url, timeout=180) as resp, open(tmp, "wb") as fh:
+                while True:
+                    chunk = resp.read(1 << 16)
+                    if not chunk:
+                        break
+                    fh.write(chunk)
+            digest = hashlib.sha256(tmp.read_bytes()).hexdigest()
+            if digest != WEIGHT_SHA256:
+                raise ValueError("sha256 mismatch: " + digest)
+            tmp.replace(WEIGHT)
+            return WEIGHT
+        except Exception as exc:
+            errors.append(url + " -> " + str(exc))
+            if tmp.exists():
+                tmp.unlink()
+    raise RuntimeError("weight download failed: " + " | ".join(errors))
+
+
+def _as_pt_path(weight: Path) -> Path:
+    """ultralytics 只认 .pt 等已知后缀，会把 best.weights 判为非法格式。
+
+    所以真正加载前，把权重软链/复制成 .pt 再用。优先放系统临时目录，
+    避免往只读的仓库目录里写东西。
+    """
+    if weight.suffix == ".pt":
+        return weight
+
+    import shutil
+    import tempfile
+
+    target = Path(tempfile.gettempdir()) / "pv_defect_best.pt"
+    if not target.exists() or target.stat().st_size != weight.stat().st_size:
+        shutil.copyfile(weight, target)
+    return target
+
 
 # 模型只加载一次，避免每次推理都读盘
 _model = None
@@ -47,9 +129,7 @@ _model = None
 def get_model() -> YOLO:
     global _model
     if _model is None:
-        if not WEIGHT.exists():
-            raise FileNotFoundError(f"权重文件不存在：{WEIGHT}")
-        _model = YOLO(str(WEIGHT))
+        _model = YOLO(str(_as_pt_path(_ensure_weight())))
     return _model
 
 
@@ -157,4 +237,8 @@ def build_ui() -> gr.Blocks:
 
 
 if __name__ == "__main__":
-    build_ui().launch()
+    # 创空间要求监听 0.0.0.0:7860，本地跑用默认参数也没问题
+    build_ui().launch(
+        server_name=os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"),
+        server_port=int(os.environ.get("GRADIO_SERVER_PORT", "7860")),
+    )
